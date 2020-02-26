@@ -1376,61 +1376,109 @@ Link.prototype = {
     },
 
     // 创建 panel
-    _createPanel: function _createPanel(text, link) {
-        var _this = this;
+   _createPanel: function _createPanel() {
+    var _this = this;
+    var editor = this.editor;
+    var uploadImg = editor.uploadImg;
+    var config = editor.config;
 
-        // panel 中需要用到的id
-        var inputLinkId = getRandom('input-link');
-        var inputTextId = getRandom('input-text');
-        var btnOkId = getRandom('btn-ok');
-        var btnDelId = getRandom('btn-del');
+    // 创建 id
+    // 上传视频id
+    var upTriggerVideoId = getRandom('up-trigger-video');
+    var upFileVideoId = getRandom('up-file-video');
+    // 插入视频id
+    var textValId = getRandom('text-val');
+    var btnId = getRandom('btn');
 
-        // 是否显示“删除链接”
-        var delBtnDisplay = this._active ? 'inline-block' : 'none';
-
-        // 初始化并显示 panel
-        var panel = new Panel(this, {
-            width: 300,
-            // panel 中可包含多个 tab
-            tabs: [{
-                // tab 的标题
-                title: '链接',
-                // 模板
-                tpl: '<div>\n                            <input id="' + inputTextId + '" type="text" class="block" value="' + text + '" placeholder="\u94FE\u63A5\u6587\u5B57"/></td>\n                            <input id="' + inputLinkId + '" type="text" class="block" value="' + link + '" placeholder="http://..."/></td>\n                            <div class="w-e-button-container">\n                                <button id="' + btnOkId + '" class="right">\u63D2\u5165</button>\n                                <button id="' + btnDelId + '" class="gray right" style="display:' + delBtnDisplay + '">\u5220\u9664\u94FE\u63A5</button>\n                            </div>\n                        </div>',
-                // 事件绑定
-                events: [
-                // 插入链接
-                {
-                    selector: '#' + btnOkId,
-                    type: 'click',
-                    fn: function fn() {
-                        // 执行插入链接
-                        var $link = $('#' + inputLinkId);
-                        var $text = $('#' + inputTextId);
-                        var link = $link.val();
-                        var text = $text.val();
-                        _this._insertLink(text, link);
-
-                        // 返回 true，表示该事件执行完之后，panel 要关闭。否则 panel 不会关闭
+    // tabs 的配置
+    var tabsConfig = [
+        {
+            title: '上传视频或pdf',
+            tpl: '<div class="w-e-up-img-container"><div id="' + upTriggerVideoId + '" class="w-e-up-btn"><i class="w-e-icon-upload2"></i></div><div style="display:none;"><input id="' + upFileVideoId + '" type="file" multiple="multiple" accept="application/pdf,video/*"/></div></div>',
+            events: [{
+                // 触发选择图片
+                selector: '#' + upTriggerVideoId,
+                type: 'click',
+                fn: function fn() {
+                    var $file = $('#' + upFileVideoId);
+                    var fileElem = $file[0];
+                    if (fileElem) {
+                        fileElem.click();
+                    } else {
+                        // 返回 true 可关闭 panel
                         return true;
                     }
-                },
-                // 删除链接
-                {
-                    selector: '#' + btnDelId,
-                    type: 'click',
-                    fn: function fn() {
-                        // 执行删除链接
-                        _this._delLink();
-
-                        // 返回 true，表示该事件执行完之后，panel 要关闭。否则 panel 不会关闭
+                }
+            }, {
+                // 选择图片完毕
+                selector: '#' + upFileVideoId,
+                type: 'change',
+                fn: function fn() {
+                    var $file = $('#' + upFileVideoId);
+                    var fileElem = $file[0];
+                    if (!fileElem) {
+                        // 返回 true 可关闭 panel
                         return true;
                     }
-                }]
-            } // tab end
-            ] // tabs end
-        });
 
+                    // 获取选中的 file 对象列表
+                    var fileList = fileElem.files;
+                    if (fileList.length) {
+                        console.log(fileList);
+                        uploadImg.uploadVideo(fileList);
+                    }
+
+                    // 返回 true 可关闭 panel
+                    return true;
+                }
+            }]
+        }, // first tab end
+        {
+            // 标题
+            title: '插入视频',
+            // 模板
+            tpl: '<div><input id="' + textValId + '" type="text" class="block" placeholder="\u683C\u5F0F\u5982\uFF1A<iframe src=... ></iframe>"/><div class="w-e-button-container"><button id="' + btnId + '" class="right">\u63D2\u5165</button></div></div>',
+            // 事件绑定
+            events: [{
+                selector: '#' + btnId,
+                type: 'click',
+                fn: function fn() {
+                    var $text = $('#' + textValId);
+                    var val = $text.val().trim();
+
+                    if (val) _this._insert(val); // 插入视频
+
+                    // 返回 true，表示该事件执行完之后，panel 要关闭。否则 panel 不会关闭
+                    return true;
+                }
+            }]
+        } // second tab end
+    ]; // tabs end
+
+    // 判断 tabs 的显示
+    var tabsConfigResult = [];
+    if (config.uploadVideoServer) {
+        // 显示“上传视频”
+        tabsConfigResult.push(tabsConfig[0]);
+    }
+    if (config.showLinkVideo) {
+        // 显示“网络视频”
+        tabsConfigResult.push(tabsConfig[1]);
+    }
+
+    // 创建 panel
+    var panel = new Panel(this, {
+        width: 350,
+        // 一个 panel 多个 tab
+        tabs: tabsConfigResult // tabs end
+    }); // panel end
+
+    // 显示 panel
+    panel.show();
+
+    // 记录属性
+    this.panel = panel;
+}
         // 显示 panel
         panel.show();
 
